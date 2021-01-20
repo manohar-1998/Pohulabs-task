@@ -4,33 +4,49 @@ import SearchBox from "../components/SearchBox";
 import SpinnerLoader from "../Static/Images/SpinnerLoader.svg";
 import "../pages/CSS/Search.css";
 import { Image } from "antd";
-
-var axios = require("axios").default;
+import samplejson from "../pages/sample.json";
 
 function Search() {
   const [SearchTerm, setSearchTerm] = useState(0);
-  const [UpdateResults, setUpdateResults] = useState(0);
+  const [SearchedResults, setSearchedResults] = useState(0);
+  const [Filter, setFilter] = useState(0);
   const [Loader, setLoader] = useState(0);
 
   function GetValueFromChild(data) {
     setSearchTerm(data);
   }
+  function GetSearchType(data) {
+    setFilter(data);
+  }
 
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (SearchTerm !== "" && SearchTerm !== 0) {
-        //  console.log("Searching... ", SearchTerm);
-        setLoader(true);
-        fetchIMDb(SearchTerm, setUpdateResults, setLoader);
-      }
-    }, 1000);
+  useEffect(
+    () => {
+      const delayDebounceFn = setTimeout(() => {
+        if (SearchTerm !== "" && SearchTerm !== 0) {
+          //  console.log("Searching... ", SearchTerm);
+          setLoader(true);
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [SearchTerm]);
+          console.log("search term =", SearchTerm);
+
+          setSearchedResults(
+            doSearch(SearchTerm, samplejson.entries, setLoader)
+          );
+        } else console.log("filter =", Filter);
+        //showResults(Filter, setSearchedResults, samplejson);
+      }, 1000);
+
+      return () => clearTimeout(delayDebounceFn);
+    },
+    [SearchTerm],
+    [Filter]
+  );
 
   return (
     <>
-      <SearchBox parentCallback={GetValueFromChild} />
+      <SearchBox
+        parentCallback={GetValueFromChild}
+        getSearchType={GetSearchType}
+      />
 
       {Loader ? (
         <>
@@ -46,31 +62,38 @@ function Search() {
       ) : (
         ""
       )}
-      {UpdateResults ? <FetchedList FetchedJSON={UpdateResults} /> : ""}
+      {SearchedResults ? <FetchedList FetchedJSON={SearchedResults} /> : ""}
     </>
   );
 }
 
-function fetchIMDb(SearchTerm, setUpdateResults, setLoader) {
-  axios
-    .request({
-      method: "GET",
-      url: `${process.env.REACT_APP_IMDB_API_URL}${SearchTerm}`,
-      // params: { s: movieTitle, page: "1", y: year, r: "json" },
-      headers: {
-        "x-rapidapi-key": process.env.REACT_APP_RAPIDAPI_KEY,
-        "x-rapidapi-host": process.env.REACT_APP_RAPIDAPI_HOST,
-      },
-    })
-    .then(function (response) {
-      setUpdateResults(response);
-      setLoader(false);
-
-      //   console.log(response.data);
-    })
-    .catch(function (error) {
-      console.error(error);
-    });
+function doSearch(SearchTerm, samplejson, setLoader) {
+  var results = [];
+  for (var i = 0; i < samplejson.length; i++) {
+    if (samplejson[i]["title"].toLowerCase() === SearchTerm.toLowerCase()) {
+      results.push(samplejson[i]);
+    }
+  }
+  setLoader(false);
+  if (results.length > 0) return results;
+  else return "NoneFound";
 }
 
+function sortedJSON(JSONobj) {
+  var sortedArray = [];
+
+  // Push each JSON Object entry in array by [key, value]
+  for (var i in JSONobj) {
+    sortedArray.push([i, JSONobj[i]]);
+  }
+
+  // Run native sort function and returns sorted array.
+  return sortedArray.sort();
+}
+
+function showResults(Filter, setSearchedResults, samplejson) {
+  console.log("filter value = ", Filter);
+
+  return setSearchedResults(samplejson.entries);
+}
 export default Search;
